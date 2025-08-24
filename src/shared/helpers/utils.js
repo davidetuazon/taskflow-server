@@ -14,7 +14,6 @@ const authenticate = async (req, res, next) => {
     try {
         const userLogged = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
         req.user = await UserModel.findOne({ email: userLogged.email }).select(CONSTANTS.USER_FIELD);
-        console.log({ user: req.user });
 
         if (!req.user) return res.status(404).json({ message: "User not found" });
         next();

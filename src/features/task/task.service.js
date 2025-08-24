@@ -11,7 +11,7 @@ exports.create = async (id, params = {}) => {
     }
 }
 
-exports.find = async (id, query = "", options = {}) => {
+exports.find = async (query = "", options = {}, id) => {
     try {
         const filter = query ? 
         { $text: { $search: query }, $or: [ { createdBy: id }, { assignedTo: id } ] }
@@ -40,7 +40,7 @@ exports.delete = async (id) => {
         const task = await TaskModel.findById(id);
         if (task.deleted) throw new Error("Task already deleted");
 
-        const deletedTask = await TaskModel.findByIdAndUpdate(id, { deleted: true }, {new: true});
+        const deletedTask = await TaskModel.findByIdAndUpdate(id, { deleted: true }, { new: true });
         if (!deletedTask) throw new Error("Task not found");
         return deletedTask;
     } catch (e) {

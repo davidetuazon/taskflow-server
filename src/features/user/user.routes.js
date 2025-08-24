@@ -14,4 +14,15 @@ router.put('/users/:id', utils.authenticate, userController.updateUser);
 
 router.delete('/users/:id', utils.authenticate, userController.deleteUser);
 
+router.get('/me' , utils.authenticate, async (req, res, next) => {
+    try {
+        res.send(req.user);
+    } catch (e) {
+        console.log('/me err', e.message);
+        res.status(500).send({ error: e.message });
+    }
+});
+
+
+
 module.exports = router;
