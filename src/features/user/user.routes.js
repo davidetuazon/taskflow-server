@@ -10,9 +10,9 @@ router.post('/users/login', userController.login);
 
 router.get('/users', utils.authorize, userController.getUsers);
 
-router.put('/users/:id', utils.authenticate, userController.updateUser);
+router.put('/users/account/:id', utils.authenticate, userController.updateUser);
 
-router.delete('/users/:id', utils.authenticate, userController.deleteUser);
+router.delete('/users/account/:id', utils.authenticate, userController.deleteUser);
 
 router.get('/me' , utils.authenticate, async (req, res, next) => {
     try {

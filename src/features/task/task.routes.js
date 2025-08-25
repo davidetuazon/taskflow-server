@@ -6,6 +6,8 @@ const utils = require('../../shared/helpers/utils');;
 
 router.get('/tasks', utils.authenticate, taskController.getTask);
 
+router.get('/tasks/search', utils.authenticate, taskController.searchTask);
+
 router.post('/tasks', utils.authenticate, taskController.createTask);
 
 router.put('/tasks/:id', utils.authenticate, taskController.updateTask);

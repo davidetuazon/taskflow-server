@@ -27,6 +27,18 @@ exports.find = async (query = "", options = {}, id) => {
     }
 }
 
+exports.findAutoComplete = async (query = "", id) => {
+    try {
+        const filter = query ?
+        { $and: [ { $or: [ { createdBy: id }, { assignedTo: id } ] }, { title: { $regex: query, $options: "i" } } ] } :
+        { $or: [{ createdBy: id }, { assignedTo: id }] };
+
+        return await TaskModel.find(filter).limit(10);
+    } catch (e) {
+        throw(e);
+    }
+}
+
 exports.update = async (id, updates = {}) => {
     try {
         return await TaskModel.findByIdAndUpdate(id, updates, { new: true });

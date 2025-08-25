@@ -15,6 +15,18 @@ exports.getTask = async (req, res, next) => {
     }
 };
 
+exports.searchTask = async (req, res, next) => {
+    try {
+        const { search } = req.query;
+        const id = req.user._id;
+
+        const tasks = await TaskService.findAutoComplete(search || "", id);
+        res.json(tasks);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+}
+
 exports.createTask = async (req, res, next) => {
     const params = { ...req.body };
     const id = req.user._id;
