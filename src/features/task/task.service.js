@@ -2,7 +2,7 @@ const TaskModel = require('./task.model');
 
 // basically this handles business logic/database queries
 
-exports.create = async (id, params = {}) => {
+exports.create = async (params = {}, id) => {
     try {
 
         return await TaskModel.create({ ...params, createdBy: id });
@@ -14,12 +14,12 @@ exports.create = async (id, params = {}) => {
 exports.find = async (query = "", options = {}, id) => {
     try {
         const filter = query ? 
-        { $text: { $search: query }, $or: [ { createdBy: id }, { assignedTo: id } ] }
-        : { $or: [ { createdBy: id }, { assignedTo: id } ] };
+        { deleted: false, $text: { $search: query }, $or: [ { createdBy: id }, { assignedTo: id } ], }
+        : { deleted: false, $or: [ { createdBy: id }, { assignedTo: id } ] };
         const paginateOptions = {
             page: options.page || 1,
             limit: options.limit || 10,
-            sort: options.sort || { createdAt: -1 },
+            sort: options.sort || { createdDate: -1 },
         };
         return await TaskModel.paginate(filter, paginateOptions);
     } catch (e) {
