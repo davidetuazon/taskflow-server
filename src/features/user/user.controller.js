@@ -8,11 +8,6 @@ const UserService = require('./user.service');
 exports.register = async (req, res, next) => {
     const params = { ...req.body };
 
-    // params.firstName = params.firstName?.trim();
-    // params.lastName = params.lastName?.trim();
-    // params.email = params.email?.trim().toLowerCase();
-    // params.password = params.password?.trim();
-
     const issues = validate(params, constraints.register);
     if (issues) return res.status(422).send({ err: issues });
     

@@ -19,10 +19,10 @@ mongoose.connect(process.env.MONGO_URI, {
 const basepath = '/api';
 
 const tasksRoute = require(path.resolve(".") + "/src/features/task/task.routes");
-const userRoute  = require(path.resolve(".") + "/src/features/user/user.routes");
+const usersRoute  = require(path.resolve(".") + "/src/features/user/user.routes");
 
 app.use(basepath + "/v1", tasksRoute);  //domain_url/api/v1/routes
-app.use(basepath + "/v1", userRoute);   //sample: domain_url/v1/users/register
+app.use(basepath + "/v1", usersRoute);   //sample: domain_url/v1/users/register
 
 
 const PORT = process.env.PORT || 5000;
