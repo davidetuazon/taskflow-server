@@ -45,10 +45,11 @@ exports.createTask = async (req, res, next) => {
 exports.updateTask = async (req, res, next) => {
     const { id } = req.params;
     const idIssue = validate({ id }, { presence: true });
-    if (idIssue) return res.status(422).send({ err: issues });
 
     const updates = req.body;
     const issues = validate({ ...updates }, constraints.update);
+
+    if (idIssue) return res.status(422).send({ err: idIssue });
     if (issues) return res.status(422).send({ err: issues });
 
     try {

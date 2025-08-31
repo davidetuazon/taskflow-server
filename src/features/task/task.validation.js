@@ -3,11 +3,13 @@ const create = {
         presence: { allowEmpty: false, message: "A title is required" },
     },
     description: {
-        length: { maximum: 500, allowEmpty: false, message: "A description is required" },
+        length: { maximum: 500 },
     },
     status: {
         inclusion: { 
-            within: ["todo", "in-progress", "done"], message: "is not valid", allowEmpty: true }, 
+            within: ["open", "in-progress", "in-review", "done"],
+            message: "is not valid",
+            allowEmpty: true }, 
     },
     dueDate: {}
 }
@@ -19,7 +21,9 @@ const update = {
     },
     status: {
         inclusion: { 
-            within: ["todo", "in-progress", "done"], message: "is not valid", allowEmpty: true }, 
+            within: ["open", "in-progress", "in-review", "done"],
+            message: "is not valid",
+            allowEmpty: true }, 
     },
     dueDate: {}
 }
