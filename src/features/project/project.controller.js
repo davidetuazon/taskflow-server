@@ -3,43 +3,83 @@ const ProjectService = require('./project.service');
 const constraints = require('./project.validation');
 const validate = require('validate.js');
 
-exports.getProject = async (req, res, next) => {
+const slugify = (title) => {
+    return title
+        .trim()                              // remove leading/trailing spaces
+        .toLowerCase()                       // lowercase
+        .replace(/\s+/g, '-')                // spaces → dashes
+        .normalize('NFD')                     // separate accents from letters
+        .replace(/[\u0300-\u036f]/g, '')     // remove accent marks
+        .replace(/[^a-z0-9\-]/g, '');        // remove invalid chars except dash
+}
+
+// -------- CONTROLLERS -------- //
+
+exports.listProject = async (req, res, next) => {
     const userId = req.user._id;
     const { search, page = 1, limit = 10 } = req.query;
     try {
         const options = { page: Number(page), limit: Number(limit) };
         
-        const tasks = await ProjectService.find(search || "", options, userId);
-        res.json(tasks);
+        const projects = await ProjectService.findAll(search || "", options, userId);
+        res.json(projects);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 };
 
+exports.getProject = async (req, res, next) => {
+    const userId = req.user._id;
+    const slug = req.params.slug;
+
+    const issues = validate({ slug }, { presence: true });
+    if(issues) return res.status(422).json({ err: issues });
+    try {
+        const project = await ProjectService.find(userId, slug);
+        if (!project) return res.status(404).json({ error: "Missing project" });
+
+        const members = await ProjectService.findValidMembers(project.members);
+        project.members = members;
+
+        res.json(project);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+}
+
 exports.createProject = async (req, res, next) => {
     const userId = req.user._id;
     const params = req.body;
+
+    let { title } = params;
+    if (!title) return res.status(422).json({ error: "Title is required" });
+    params.slug = slugify(title);
+
     const issues = validate(params, constraints.create);
     if (issues) return res.status(422).json({ err: issues });
 
     try {
         const project = await ProjectService.create(params, userId);
-        console.log(project);
+        // console.log(project);
         res.json(project);
     } catch (e) {
+        if (e.code === 11000 && e.keyPattern?.slug ) {
+            return res.status(400).json({ error: `Project name "${title}" already exists on this account` });
+        }
         res.status(500).json({ error: e.message });
     }
 };
 
+
 exports.deleteProject = async (req, res, next) => {
     const userId = req.user._id;
 
-    const { id: projectId } = req.params;
-    const idIssues = validate({ projectId }, { presence: true });
-    if (idIssues) return res.status(422).json({ err: idIssues });
+    const slug = req.params.slug;
+    const slugIssues = validate({ slug }, { presence: true });
+    if (slugIssues) return res.status(422).json({ err: slugIssues });
 
     try {
-        const project = await ProjectService.delete(userId, projectId);
+        const project = await ProjectService.delete(userId, slug);
         if (!project) return res.status(404).json({ error: "Project not found" });
         res.json(project);
     } catch (e) {
@@ -49,29 +89,56 @@ exports.deleteProject = async (req, res, next) => {
 
 exports.updateProject = async (req, res, next) => {
     const userId = req.user._id;
-    const { id: projectId } = req.params;
-    const idIssues = validate({ projectId }, { presence: true });
+    const slug = req.params.slug;
+    const slugIssues = validate({ slug }, { presence: true });
 
-    const updates = req.body;
+    const allowedUpdates = ['title', 'description'];
+    const updates = {};
+    allowedUpdates.forEach(field => {
+        if (req.body[field] !== undefined) updates[field] = req.body[field];
+    });
+
+    const { title } = updates;
+    if (title) {
+        updates.slug = slugify(title);
+    }
     const issues = validate(updates, constraints.update);
 
-    if (idIssues) return res.status(422).json({ err: idIssues });
+    if (slugIssues) return res.status(422).json({ err: slugIssues });
     if (issues) return res.status(422).json({ err: issues });
 
     try {
-        const project = await ProjectService.updateProject(userId, projectId, updates);
+        const project = await ProjectService.updateProject(userId, slug, updates);
         if (!project) return res.status(404).json({ error: "Project not found" });
         res.json(project);
     } catch (e) {
+        if (e.code === 11000 && e.keyPattern?.slug) {
+            return res.status(400).json({ error: `Project name "${title}" already exists on this account` });
+        }
         res.status(500).json({ error: e.message });
     }
 };
 
+// exports.getProjectMembers = async (req, res, next) => {
+//     const { id: projectId } = req.params;
+//     if (!projectId) return res.status(404).json({ error: "Project not found" });
+
+//     const members = req.body;
+//     console.log({members: members});
+//     try {
+//         const mem = await ProjectService.findMembers(members);
+//         if (!mem) return res.status(404).json({ error: "No members found" });
+//         res.json(mem);
+//     } catch (e) {
+//         res.status(500).json({ error: e.message });
+//     }
+// }
+
 exports.addProjectMembers = async (req, res, next) => {
     const userId = req.user._id;
 
-    const { id: projectId } = req.params;
-    const idIssues = validate({ projectId }, { presence: true });
+    const slug = req.params.slug;
+    const slugIssues = validate({ slug }, { presence: true });
 
     const { members } = req.body;
     if (!Array.isArray(members) || members.length === 0) {
@@ -79,11 +146,11 @@ exports.addProjectMembers = async (req, res, next) => {
     }
     const issues = validate({ members }, constraints.addMembers);
 
-    if (idIssues) return res.status(422).json({ err: idIssues });
+    if (slugIssues) return res.status(422).json({ err: slugIssues });
     if (issues) return res.status(422).json({ err: issues });
 
     try {
-        const project = await ProjectService.addMembers(userId, projectId, members);
+        const project = await ProjectService.addMembers(userId, slug, members);
         if (!project) return res.status(404).json({ error: "Failed to add new members" });
         res.json(project);
     } catch (e) {
@@ -94,12 +161,13 @@ exports.addProjectMembers = async (req, res, next) => {
 exports.removeProjectMembers = async (req, res, next) => {
     const userId = req.user._id;
 
-    const { id: projectId, memberId } = req.params;
-    const idIssues = validate({ projectId, memberId }, { projectId: { presence: true }, memberId: { presence: true } });
-    if (idIssues) return res.status(422).json({ err: idIssues });
+    const { slug: slug, memberId } = req.params;
+    console.log(slug)
+    const issues = validate({ slug, memberId }, { slug: { presence: true }, memberId: { presence: true } });
+    if (issues) return res.status(422).json({ err: issues });
 
     try {
-        const project = await ProjectService.removeMembers(userId, projectId, memberId);
+        const project = await ProjectService.removeMembers(userId, slug, memberId);
         if (!project) return res.status(404).json({ error: "Failed to remove member" });
         res.json(project);
     } catch (e) {

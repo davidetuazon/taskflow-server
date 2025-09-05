@@ -14,6 +14,7 @@ const taskSchemaV2 = new Schema(
             trim: true,
         },
         dueDate: {
+            required: true,
             type: Date,
         },
         status: {

@@ -4,12 +4,16 @@ const router = express.Router();
 const taskControllerV2 = require('./task.controller-v2');
 const utils = require('../../../shared/helpers/utils');
 
-router.get('/projects/:id/tasks', utils.authenticate, taskControllerV2.getTask);
+router.get('/feed', utils.authenticate, taskControllerV2.getFeed);
 
-router.post('/projects/:id/tasks', utils.authenticate, taskControllerV2.createTask);
+router.get('/analytics/overview', utils.authenticate, taskControllerV2.taskOverview);
 
-router.put('/projects/:id/tasks/:taskId', utils.authenticate, taskControllerV2.updateTask);
+router.get('/projects/:slug/tasks', utils.authenticate, taskControllerV2.listTask);
 
-router.delete('/projects/:id/tasks/:taskId', utils.authenticate, taskControllerV2.deleteTask);
+router.post('/projects/:slug/tasks', utils.authenticate, taskControllerV2.createTask);
+
+router.put('/projects/:slug/tasks/:taskId', utils.authenticate, taskControllerV2.updateTask);
+
+router.delete('/projects/:slug/tasks/:taskId', utils.authenticate, taskControllerV2.deleteTask);
 
 module.exports = router;

@@ -13,6 +13,10 @@ const ProjectSchema = new Schema(
             required: true,
             trim: true,
         },
+        slug: {
+            type: String,
+            required: true,
+        },
         description: {
             type: String,
             default: "",
@@ -34,5 +38,8 @@ ProjectSchema.index({
 ProjectSchema.index({
     members: 1,
 });
+ProjectSchema.index({
+    owner: 1, slug: 1,
+}, { unique: true, partialFilterExpression: { deleted: false } });
 ProjectSchema.plugin(mongoosePaginate);
 module.exports = mongoose.model("Project", ProjectSchema);

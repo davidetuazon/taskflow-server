@@ -17,6 +17,9 @@ exports.register = async (req, res, next) => {
     
         res.status(201).json({ message: 'Registration successful' });
     } catch (e) {
+        if (e.code === 11000 && e.keyPattern?.email) {
+            return res.status(400).json({ error: `An account with this email already exists` });
+        }
         res.status(500).json({ error: e.message });
     }
 }

@@ -23,12 +23,14 @@ const tasksRoute = require(path.resolve(".") + "/src/features/task/task.routes")
 const usersRoute  = require(path.resolve(".") + "/src/features/user/user.routes");
 
 const projectRoute = require(path.resolve(".") + "/src/features/project/project.routes");
+const projectMemberRoute = require(path.resolve(".") + "/src/features/project/project.member.routes");
 const taskRouteV2 = require(path.resolve(".") + "/src/features/task/v2/task.routes-v2");
 
-app.use(basepath + "/v1", tasksRoute);  //domain_url/api/v1/routes
-app.use(basepath + "/v1", usersRoute);   //sample: domain_url/v1/users/register
+app.use(basepath + "/v1", tasksRoute);  //domain_url/api/v1/routes //sample: domain_url/v1/users/register
 
+app.use(basepath + "/v2", usersRoute);   
 app.use(basepath + "/v2", taskRouteV2);
+app.use(basepath + "/v2", projectMemberRoute);
 app.use(basepath + "/v2", projectRoute);
 
 

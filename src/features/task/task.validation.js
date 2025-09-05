@@ -3,7 +3,7 @@ const create = {
         presence: { allowEmpty: false, message: "A title is required" },
     },
     description: {
-        length: { maximum: 500 },
+        length: { maximum: 350 },
     },
     status: {
         inclusion: { 
@@ -17,7 +17,7 @@ const create = {
 const update = {
     title: {},
     description: {
-        length: { maximum: 500, allowEmpty: true  },
+        length: { maximum: 350, allowEmpty: true  },
     },
     status: {
         inclusion: { 

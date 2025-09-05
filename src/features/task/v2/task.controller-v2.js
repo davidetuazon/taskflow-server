@@ -17,19 +17,43 @@ const parsePagination = ({ page = 1, limit = 10}) => ({
 
 // ------ contorllers ------ //
 
-exports.getTask = async (req, res, next) => {
+exports.taskOverview = async (req, res, next) => {
+    const userId = req.user._id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    try {
+        const overview = await TaskServiceV2.overview(userId);
+        res.json(overview);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+}
+
+exports.getFeed = async (req, res, next) => {
+    const userId = req.user._id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const { filter, limit = 3 } = req.query;
+    try {
+        const feed = await TaskServiceV2.getFeed({ filter, limit }, userId);
+        if (!feed) return res.status(404).json({ error: "Task not found"});
+        res.json(feed);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+}
+
+exports.listTask = async (req, res, next) => {
     const userId = req.user._id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const { id: projectId } = req.params;
-    const issues = validate({ projectId }, { presence: true });
+    const slug = req.params.slug;
+    const issues = validate({ slug }, { presence: true });
     if (issues) return res.status(422).json({ err: issues });
 
     try {
-        const { search } = req.query;
+        const { filter, sort } = req.query;
         const options = parsePagination(req.query);
 
-        const task = await TaskServiceV2.find(search || "", options, userId, projectId);
+        const task = await TaskServiceV2.find({ filter, sort, ...options }, userId, slug);
         res.json(task);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -38,18 +62,20 @@ exports.getTask = async (req, res, next) => {
 
 exports.createTask = async (req, res, next) => {
     const userId = req.user._id;
-    const { id: projectId } = req.params;
-    const idIssues = validateIds({ userId, projectId });
-    // const idIssues = validate({ userId, projectId }, { userId: { presence: true },  projectId: { presence: true } });
+    const idIssues = validateIds({ userId });
+
+    const slug = req.params.slug;
+    const slugIssues = validate({ slug }, { presence: true });
 
     const params = req.body;
     const issues = validate(params, constraints.create);
 
     if (idIssues) return res.status(401).json({ err: idIssues });
+    if (slugIssues) return res.status(422).json({ err: slugIssues });
     if (issues) return res.status(422).json({ err: issues });
 
     try {
-        const task = await TaskServiceV2.create(params, userId, projectId);
+        const task = await TaskServiceV2.create(params, userId, slug);
         // console.log(task);
         res.json(task);
     } catch (e) {
@@ -59,18 +85,23 @@ exports.createTask = async (req, res, next) => {
 
 exports.updateTask = async (req, res, next) => {
     const userId = req.user._id; 
+    if (!userId) return res.status(401).json({ error: "Unauthorized"});
 
-    const { id: projectId, taskId } = req.params;
-    const idIssues = validateIds({ projectId, taskId});
+    const slug = req.params.slug;
+    const slugIssues = validate({ slug }, { presence: true });
+
+    const { taskId } = req.params;
+    const idIssues = validateIds({ taskId });
 
     const updates = req.body;
     const issues = validate(updates, constraints.update);
 
+    if (slugIssues) return res.status(422).json({ err: slugIssues });
     if (idIssues) return res.status(422).json({ err: idIssues });
     if (issues) return res.status(422).json({ err: issues });
 
     try {
-        const task = await TaskServiceV2.update(userId, projectId, taskId, updates);
+        const task = await TaskServiceV2.update(userId, slug, taskId, updates);
         if (!task) return res.status(404).json({ error: "Task not found" });
 
         res.json(task);
@@ -81,13 +112,19 @@ exports.updateTask = async (req, res, next) => {
 
 exports.deleteTask = async (req, res, next) => {
     const userId = req.user._id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized"});
 
-    const { id: projectId, taskId } = req.params;
-    const idIssues = validateIds({ projectId, taskId });
+    const { taskId } = req.params;
+    const idIssues = validateIds({ taskId });
+
+    const slug = req.params.slug;
+    const slugIssues = validate({ slug }, { presence: true });
+
     if (idIssues) return res.status(422).json({ err: idIssues });
+    if (slugIssues) return res.status(422).json({ err: slugIssues });
 
     try {
-        const deletedTask = await TaskServiceV2.delete(userId, projectId, taskId);
+        const deletedTask = await TaskServiceV2.delete(userId, slug, taskId);
         if (!deletedTask) return res.status(404).json({ error: "Task not found" });
 
         res.send(200);

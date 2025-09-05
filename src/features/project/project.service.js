@@ -1,5 +1,6 @@
 const ProjectModel = require('./project.model');
 const UserModel = require('../user/user.model');
+const { mongoose } = require('mongoose');
 
 exports.create = async (params = {}, userId) => {
     if (!userId) throw new Error("Missing user ID");
@@ -10,9 +11,48 @@ exports.create = async (params = {}, userId) => {
     }
 }
 
-exports.find = async (query = "", options = {}, userId) => {
+exports.findOne = async (userId, slug) => {
+    if (!userId) throw new Error("Missing user ID");
     try {
-        let filter = { deleted: false, $or: [ { owner: userId }, {members: userId } ] };
+        const filter = {
+            deleted: false,
+            slug: slug,
+            $or: [
+                { owner: userId },
+                { members: userId }
+            ]
+        };
+        return await ProjectModel.findOne(filter);
+    } catch (e) {
+        throw (e);
+    }
+}
+
+exports.find = async (userId, slug) => {
+    try {
+        const filter = {
+            deleted: false,
+            slug: slug,
+            $or: [
+                { owner: userId },
+                { members: userId }
+            ]
+        };
+        return await ProjectModel.findOne(filter).lean();
+    } catch (e) {
+        throw(e);
+    }
+}
+
+exports.findAll = async (query = "", options = {}, userId) => {
+    try {
+        let filter = {
+            deleted: false,
+            $or: [
+                { owner: userId },
+                { members: userId }
+            ]
+        };
 
         if(query) {
             filter.$text = { $search: query };
@@ -22,17 +62,29 @@ exports.find = async (query = "", options = {}, userId) => {
             page: options.options || 1,
             limit: options.limit || 10,
             sort: options.sort || { createdDate: -1 },
+            lean: true,
+            populate: { path: 'owner', select: 'email' }
         };
-        return await ProjectModel.paginate(filter, paginateOptions);
+        const project = await ProjectModel.paginate(filter, paginateOptions);
+        return project;
     } catch (e) {
         throw(e);
     }
 }
 
-exports.delete = async (userId, projectId) => {
-    if (!projectId) throw new Error("Missing project ID");
+exports.findById = async (userId) => {
+    if (!userId) throw new Error("Missing ID");
     try {
-        const filter = { deleted: false, _id: projectId, owner: userId };
+        return await ProjectModel.findById(userId);
+    } catch (e) {
+        throw(e);
+    }
+}
+
+exports.delete = async (userId, slug) => {
+    if (!slug) throw new Error("Missing project");
+    try {
+        const filter = { deleted: false, slug: slug, owner: userId };
         const deletedProject = await ProjectModel.findOneAndUpdate(filter, { deleted: true }, { new: true });
         if (!deletedProject) throw new Error("Project not found");
         return deletedProject;
@@ -41,22 +93,32 @@ exports.delete = async (userId, projectId) => {
     }
 }
 
-exports.updateProject = async (userId, projectId, updates = {}) => {
-    if (!projectId) throw new Error("Missing project ID");
+exports.updateProject = async (userId, slug, updates = {}) => {
+    if (!slug) throw new Error("Missing project");
     if (Object.keys(updates).length === 0) throw new Error("Updates can't be null");
     try {
-        const filter = { deleted: false, _id: projectId, owner: userId}
+        const filter = { deleted: false, slug: slug, owner: userId}
         return await ProjectModel.findOneAndUpdate(filter, updates, { new: true });
     } catch (e) {
         throw(e);
     }
 }
 
-exports.addMembers = async (userId, projectId, members) => {
-    if (!projectId) throw new Error("Missing project ID");
+exports.findValidMembers = async (ids = []) => {
+    if (!ids.length) return [];
+    
+    const objectIds = ids.map(id =>
+        id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(id)
+    );
+    return await UserModel.find({ deleted: false, _id: { $in: objectIds } });
+}
+
+exports.addMembers = async (userId, slug, members) => {
+    if (!slug) throw new Error("Missing project");
     if (members.length === 0) throw new Error("New members can't be null");
     try {
-        const project = await ProjectModel.findById(projectId);
+        const filter = { deleted: false, owner: userId, slug: slug }
+        const project = await ProjectModel.findOne(filter);
         if (project.owner.toString() !== userId.toString()) {
             throw new Error("Only project owner can add members");
         }
@@ -74,10 +136,11 @@ exports.addMembers = async (userId, projectId, members) => {
     }
 }
 
-exports.removeMembers = async (userId, projectId, memberId) => {
-    if (!projectId || !memberId) throw new Error("Missing ID parameter/s");
+exports.removeMembers = async (userId, slug, memberId) => {
+    if (!slug || !memberId) throw new Error("Missing ID parameter/s");
     try {
-        const project = await ProjectModel.findById(projectId);
+        const filter = { deleted: false, owner: userId, slug: slug }
+        const project = await ProjectModel.findOne(filter);
         if (project.owner.toString() !== userId.toString()) {
             throw new Error("Only project owner can remove members");
         }
