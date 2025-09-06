@@ -18,7 +18,10 @@ const userSchema = new Schema(
         fullName: String,
         firstName: String,
         lastName: String,
-
+        username: {
+            type: String,
+            unique: true,
+        },
         email: {
             type: String,
             lowercase: true,
@@ -36,6 +39,11 @@ userSchema.index({
     firstName: 'text',
     lastName: 'text',
     fullName: 'text',
+});
+userSchema.index({
+    username: 1
+}, {
+    unique: true
 });
 userSchema.plugin(mongoosePaginate);
 module.exports = mongoose.model('User', userSchema);

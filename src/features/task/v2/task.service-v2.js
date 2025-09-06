@@ -1,4 +1,5 @@
 const projectModel = require('../../project/project.model');
+const userModel = require('../../user/user.model');
 const TaskModelV2 = require('./task.model-v2');
 
 const buildTaskFilter = (userId, projectId, taskId) => {
@@ -69,16 +70,26 @@ exports.overview = async (userId) => {
     }
 };
 
-exports.getFeed = async (options = {}, userId) => {
+exports.getFeed = async (options = {}, userId, username) => {
     if (!userId) throw new Error("Unauthorized");
     const now = new Date();
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
     const todayEnd   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
     try {
-        let filter = { deleted: false };
+        const user = await userModel.findOne({ username: username, deleted: false });
+        if (!user) throw new Error("User not found or deleted");
+
+        if (user._id.toString() !== userId.toString()) {
+            throw { status: 401, message: 'Unauthorized' };
+        }
+
+        let filter = { 
+            deleted: false
+        };
+
         filter.status = { $ne: 'in-review'};
-        filter.$or = [ { createdBy: userId }, { assignedTo: userId } ];
+        filter.$or = [ { createdBy: user._id }, { assignedTo: user._id } ];
 
         if (options.filter === "overdue") {
             filter.dueDate = { $lt: todayStart };
@@ -96,7 +107,8 @@ exports.getFeed = async (options = {}, userId) => {
             .populate({
                 path: 'projectId',
                 select: 'slug',
-            });
+            })
+            .lean();
 
         return task;
     } catch (e) {

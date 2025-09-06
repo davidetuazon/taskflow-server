@@ -1,4 +1,13 @@
 const register = {
+    username: 
+    {
+        presence: { allowEmpty: false, message: "Username is required"},
+        length: { minimum: 5, maximum: 20, message: "Username must be between 5-20 characters" },
+        format: {
+            pattern: /^(?!-)[a-zA-Z0-9]*-?[a-zA-Z0-9]*(?<!-)$/,
+            message: "Username may only contain alphanumeric characters or single hyphens, and cannot begin or end with a hyphen"
+        }
+    },
     firstName: {
         presence: { allowEmpty: false, message: "First name can't be blank" },
     },
@@ -25,6 +34,7 @@ const signIn = {
 }
 
 const update = {
+    username: {},
     firstName: {},
     lastName: {},
 }

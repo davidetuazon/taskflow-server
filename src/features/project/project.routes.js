@@ -4,14 +4,14 @@ const router = express.Router();
 const projectController = require('./project.controller');
 const utils = require('../../shared/helpers/utils');
 
-router.get('/projects', utils.authenticate, projectController.listProject);
+router.get('/:username', utils.authenticate, projectController.listProject);
 
-router.post('/projects', utils.authenticate, projectController.createProject);
+router.post('/:username/new', utils.authenticate, projectController.createProject);
 
-router.get('/projects/:slug', utils.authenticate, projectController.getProject);
+router.get('/:username/:slug', utils.authenticate, projectController.getProject);
 
-router.put('/projects/:slug', utils.authenticate, projectController.updateProject);
+router.put('/:username/:slug', utils.authenticate, projectController.updateProject);
 
-router.delete('/projects/:slug', utils.authenticate, projectController.deleteProject);
+router.delete('/:username/:slug', utils.authenticate, projectController.deleteProject);
 
 module.exports = router;

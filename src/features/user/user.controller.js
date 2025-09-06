@@ -20,6 +20,9 @@ exports.register = async (req, res, next) => {
         if (e.code === 11000 && e.keyPattern?.email) {
             return res.status(400).json({ error: `An account with this email already exists` });
         }
+        if (e.code === 11000 && e.keyPattern?.username) {
+            return res.status(400).json({ error: `Username '${e.keyValue.username}' is already taken` });
+        }
         res.status(500).json({ error: e.message });
     }
 }
@@ -35,13 +38,15 @@ exports.login = async (req, res, next) => {
 
         const payload = {
             role: user.role,
-            email: user.email
+            email: user.email,
+            username: user.username,
         };
         const accessToken = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '7d' });
         
         res.send({
             role: payload.role,
             email: payload.email,
+            username: payload.username,
             token: accessToken
         });
     } catch (e) {

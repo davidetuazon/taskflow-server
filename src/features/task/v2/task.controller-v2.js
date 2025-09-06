@@ -31,9 +31,14 @@ exports.taskOverview = async (req, res, next) => {
 exports.getFeed = async (req, res, next) => {
     const userId = req.user._id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const { username } = req.params;
+    const issues = validate({ username }, { presence: true });
+    if (issues) return res.status(422).json({ error: issues });
+
     const { filter, limit = 3 } = req.query;
     try {
-        const feed = await TaskServiceV2.getFeed({ filter, limit }, userId);
+        const feed = await TaskServiceV2.getFeed({ filter, limit }, userId, username);
         if (!feed) return res.status(404).json({ error: "Task not found"});
         res.json(feed);
     } catch (e) {

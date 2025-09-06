@@ -2,9 +2,16 @@ const ProjectModel = require('./project.model');
 const UserModel = require('../user/user.model');
 const { mongoose } = require('mongoose');
 
-exports.create = async (params = {}, userId) => {
+exports.create = async (userId, username, params = {}) => {
     if (!userId) throw new Error("Missing user ID");
     try {
+        const matched = await UserModel.findOne({ username: username, deleted: false });
+        if (!matched) throw new Error("User not found or deleted");
+
+        if ( matched._id.toString() !== userId.toString()) {
+            throw { status: 403, message: "Cannot create projects for other users" };
+        }
+
         return await ProjectModel.create({ ...params, owner: userId });
     } catch (e) {
         throw(e);
@@ -28,21 +35,35 @@ exports.findOne = async (userId, slug) => {
     }
 }
 
-exports.find = async (userId, slug) => {
+exports.find = async (userId, slug, username) => {
     try {
-        const filter = {
+        const me = await UserModel.findOne({ _id: userId, deleted: false });
+        if (!me) throw new Error("Unauthorized");
+
+        const user = await UserModel.findOne({ username: username, deleted: false });
+        if (!user)throw new Error("User not found or deleted");
+
+        let filter = {
             deleted: false,
-            slug: slug,
-            $or: [
-                { owner: userId },
-                { members: userId }
-            ]
+            slug: slug
         };
+
+        if (me._id.toString() === user._id.toString()) {
+            filter.$or = [
+                { owner: me._id },
+                { members: me._id }
+            ];
+        } else {
+            filter.owner = user._id;
+            filter.members = me._id;
+        }
+
+
         return await ProjectModel
             .findOne(filter)
             .populate({
                 path: 'owner',
-                select: 'email',
+                select: 'email username',
             })
             .lean();
     } catch (e) {
@@ -50,8 +71,15 @@ exports.find = async (userId, slug) => {
     }
 }
 
-exports.findAll = async (query = "", options = {}, userId) => {
+exports.findAll = async (query = "", options = {}, userId, username) => {
     try {
+        const user = await UserModel.findOne({ username: username, deleted: false });
+        if (!user)throw new Error("User not found or deleted");
+
+        if(user._id.toString() !== userId.toString()) {
+            throw { status: 403, message: "Cannot view projects you're not a member or own" };
+        }
+
         let filter = {
             deleted: false,
             $or: [
@@ -69,7 +97,7 @@ exports.findAll = async (query = "", options = {}, userId) => {
             limit: options.limit || 10,
             sort: options.sort || { createdDate: -1 },
             lean: true,
-            populate: { path: 'owner', select: 'email' }
+            populate: { path: 'owner', select: 'email username' }
         };
         const project = await ProjectModel.paginate(filter, paginateOptions);
         return project;
@@ -87,10 +115,17 @@ exports.findById = async (userId) => {
     }
 }
 
-exports.delete = async (userId, slug) => {
+exports.delete = async (userId, slug, username) => {
     if (!slug) throw new Error("Missing project");
     try {
-        const filter = { deleted: false, slug: slug, owner: userId };
+        const matched = await UserModel.findOne({ username: username, deleted: false });
+        if (!matched) throw new Error("User not found or deleted");
+
+        if (matched._id.toString() !== userId.toString()) {
+            throw { status: 403, message: "Cannot delete projects for other users" };
+        }
+
+        const filter = { deleted: false, slug: slug, owner: matched._id };
         const deletedProject = await ProjectModel.findOneAndUpdate(filter, { deleted: true }, { new: true });
         if (!deletedProject) throw new Error("Project not found");
         return deletedProject;
@@ -99,11 +134,18 @@ exports.delete = async (userId, slug) => {
     }
 }
 
-exports.updateProject = async (userId, slug, updates = {}) => {
+exports.updateProject = async (userId, slug, username, updates = {}) => {
     if (!slug) throw new Error("Missing project");
     if (Object.keys(updates).length === 0) throw new Error("Updates can't be null");
     try {
-        const filter = { deleted: false, slug: slug, owner: userId}
+        const matched = await UserModel.findOne({ username: username, deleted: false });
+        if (!matched) throw new Error("User not found or deleted");
+
+        if (matched._id.toString() !== userId.toString()) {
+            throw { status: 403, message: "Cannot update projects for other users" };
+        }
+
+        const filter = { deleted: false, slug: slug, owner: matched._id}
         return await ProjectModel.findOneAndUpdate(filter, updates, { new: true });
     } catch (e) {
         throw(e);
@@ -118,7 +160,7 @@ exports.findValidMembers = async (ids = []) => {
     );
     return await UserModel
         .find({ deleted: false, _id: { $in: objectIds } })
-        .select('_id email fullName');
+        .select('_id email fullName username');
 }
 
 exports.addMembers = async (userId, slug, members) => {

@@ -31,6 +31,7 @@ exports.signIn = async (params) => {
         return ({
             role: user.role,
             email: user.email,
+            username: user.username,
         })
     } catch (e) {
         throw(e);
