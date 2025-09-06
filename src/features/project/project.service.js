@@ -38,7 +38,13 @@ exports.find = async (userId, slug) => {
                 { members: userId }
             ]
         };
-        return await ProjectModel.findOne(filter).lean();
+        return await ProjectModel
+            .findOne(filter)
+            .populate({
+                path: 'owner',
+                select: 'email',
+            })
+            .lean();
     } catch (e) {
         throw(e);
     }
@@ -110,7 +116,9 @@ exports.findValidMembers = async (ids = []) => {
     const objectIds = ids.map(id =>
         id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(id)
     );
-    return await UserModel.find({ deleted: false, _id: { $in: objectIds } });
+    return await UserModel
+        .find({ deleted: false, _id: { $in: objectIds } })
+        .select('_id email fullName');
 }
 
 exports.addMembers = async (userId, slug, members) => {

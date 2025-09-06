@@ -51,6 +51,10 @@ taskSchemaV2.index({
     status: 1,
 });
 taskSchemaV2.index({
+    projectId: 1,
+    assignedTo: 1,
+});
+taskSchemaV2.index({
     assignedTo: 1,
 });
 taskSchemaV2.plugin(mongoosePaginate);

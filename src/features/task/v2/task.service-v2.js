@@ -26,19 +26,6 @@ const slugProjectMatcher = async (userId, slug) => {
 
 // ------- SERVICES ------- //
 
-exports.create = async (params = {}, userId, slug) => {
-    if (!userId || !slug) throw new Error("Missing ID parameter/s");
-    try {
-        const match = await slugProjectMatcher(userId, slug);
-        if (!match) throw new Error("Missin project");
-        const projectId = match._id;
-
-        return await TaskModelV2.create({ ...params, createdBy: userId, projectId: projectId });
-    } catch (e) {
-        throw(e);
-    }
-};
-
 exports.overview = async (userId) => {
     if (!userId) throw new Error("Unauthorized");
     const now = new Date();
@@ -103,13 +90,32 @@ exports.getFeed = async (options = {}, userId) => {
 
         const limit = parseInt(options.limit) || 3;
         
-        const task = await TaskModelV2.find(filter).sort({ dueDate: 1 }).limit(limit);
-        // console.log({ task });
+        const task = await TaskModelV2.find(filter)
+            .sort({ dueDate: 1 })
+            .limit(limit)
+            .populate({
+                path: 'projectId',
+                select: 'slug',
+            });
+
         return task;
     } catch (e) {
         throw (e);
     }
 }
+
+exports.create = async (params = {}, userId, slug) => {
+    if (!userId || !slug) throw new Error("Missing ID parameter/s");
+    try {
+        const match = await slugProjectMatcher(userId, slug);
+        if (!match) throw new Error("Missin project");
+        const projectId = match._id;
+
+        return await TaskModelV2.create({ ...params, createdBy: userId, projectId: projectId });
+    } catch (e) {
+        throw(e);
+    }
+};
 
 exports.find = async (options = {}, userId, slug) => {
     if (!userId) throw new Error("Unauthorized");
@@ -152,7 +158,7 @@ exports.find = async (options = {}, userId, slug) => {
                 break;
         }
 
-        let sort = { dueDate: - 1 };
+        let sort = { createdDate: -1 };
 
         if (options.sort === 'default') {
             sort;
@@ -166,6 +172,10 @@ exports.find = async (options = {}, userId, slug) => {
             page: options.page || 1,
             limit: options.limit || 10,
             sort,
+            populate: {
+                path: 'projectId',
+                select: 'slug'
+            }
         };
         return await TaskModelV2.paginate(filter, paginateOptions);
     } catch (e) {
