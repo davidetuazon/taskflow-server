@@ -1,5 +1,5 @@
 const projectModel = require('../../project/project.model');
-const userModel = require('../../user/user.model');
+const UserModel = require('../../user/user.model');
 const TaskModelV2 = require('./task.model-v2');
 
 const buildTaskFilter = (userId, projectId, taskId) => {
@@ -20,15 +20,32 @@ const buildTaskFilter = (userId, projectId, taskId) => {
     };
 }
 
-const slugProjectMatcher = async (userId, slug) => {
-    const filter = { deleted: false, $or: [{ owner: userId}, {members: userId}], slug: slug };
+const slugProjectMatcher = async (userId, username, slug) => {
+    const user = await UserModel.findOne({ deleted: false, username: username });
+    if (!user) throw new Error("User not found or deleted");
+
+    const filter = { 
+        deleted: false,
+        slug: slug,
+    };
+    
+    if (user._id.toString() === userId.toString()) {
+        filter.$or = [
+            { owner: userId },
+            { members: userId }
+        ]
+    } else {
+        filter.owner = user._id;
+        filter.members = userId;
+    }
+
     return await projectModel.findOne(filter);
 }
 
 // ------- SERVICES ------- //
 
 exports.overview = async (userId) => {
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) throw { status: 401, message: "Unauthorized" };
     const now = new Date();
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
     const todayEnd   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
@@ -71,13 +88,13 @@ exports.overview = async (userId) => {
 };
 
 exports.getFeed = async (options = {}, userId, username) => {
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) throw { status: 401, message: "Unauthorized" };
     const now = new Date();
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
     const todayEnd   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
     try {
-        const user = await userModel.findOne({ username: username, deleted: false });
+        const user = await UserModel.findOne({ username: username, deleted: false });
         if (!user) throw new Error("User not found or deleted");
 
         if (user._id.toString() !== userId.toString()) {
@@ -116,33 +133,32 @@ exports.getFeed = async (options = {}, userId, username) => {
     }
 }
 
-exports.create = async (params = {}, userId, slug) => {
+exports.create = async (params = {}, userId, username, slug) => {
     if (!userId || !slug) throw new Error("Missing ID parameter/s");
     try {
-        const match = await slugProjectMatcher(userId, slug);
-        if (!match) throw new Error("Missin project");
-        const projectId = match._id;
+        const project = await slugProjectMatcher(userId, username, slug);
+        if (!project) throw { status: 404, message: "Project not found or missing authorization" };
 
-        return await TaskModelV2.create({ ...params, createdBy: userId, projectId: projectId });
+        return await TaskModelV2.create({ ...params, createdBy: userId, projectId: project._id });
     } catch (e) {
         throw(e);
     }
 };
 
-exports.find = async (options = {}, userId, slug) => {
-    if (!userId) throw new Error("Unauthorized");
+exports.findAll = async (options = {}, userId, username, slug) => {
+    if (!userId) throw { status: 401, message: "Unauthorized" };
+    if (!username || !slug) throw new Error("Missing ID parameter/s");
 
     const now = new Date();
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
     const todayEnd   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
     try {
-        const match = await slugProjectMatcher(userId, slug);
-        if (!match) throw new Error("Missing project");
-        const projectId = match._id;
+        const project = await slugProjectMatcher(userId, username, slug);
+        if (!project) throw { status: 404, message: "Project not found or missing authorization" };
 
         let filter = { 
-            projectId: projectId,
+            projectId: project._id,
             deleted : false,
             $or: [
                 { createdBy: userId },
@@ -172,9 +188,8 @@ exports.find = async (options = {}, userId, slug) => {
 
         let sort = { createdDate: -1 };
 
-        if (options.sort === 'default') {
-            sort;
-        } else if (options.sort === 'ascending') {
+    
+        if (options.sort === 'ascending') {
             sort = { dueDate: 1 };
         } else if (options.sort == 'descending') {
             sort = { dueDate: -1 };
@@ -187,7 +202,8 @@ exports.find = async (options = {}, userId, slug) => {
             populate: {
                 path: 'projectId',
                 select: 'slug'
-            }
+            },
+            lean: true,
         };
         return await TaskModelV2.paginate(filter, paginateOptions);
     } catch (e) {
@@ -195,29 +211,46 @@ exports.find = async (options = {}, userId, slug) => {
     }
 };
 
-exports.update = async (userId, slug, taskId, updates = {}) => {
-    if (!taskId) throw new Error("Failed task updated due to missing ID");
+exports.find = async (userId, username, slug, taskId) => {
+    if (!userId) throw { status: 401, message: "Unauthorized" };
+    try {
+        const project = await slugProjectMatcher(userId, username, slug);
+        if (!project) throw { status: 404, message: "Project not found or missing authorization" };
+
+        return await TaskModelV2
+        .findOne({ deleted: false, projectId: project._id, _id: taskId })
+        .populate({
+            path: 'assignedTo',
+            select: 'email username fullName'
+        });
+    } catch (e) {
+        throw (e);
+    }
+}
+
+exports.update = async (userId, username, slug, taskId, updates = {}) => {
+    if (!userId) throw { status: 401, message: "Unauthorized" };
+    if (!taskId) throw new Error("Failed task updated due to missing task ID");
     if (Object.keys(updates).length === 0) throw new Error("Updates can't be null");
     try {
-        const match = await slugProjectMatcher(userId, slug);
-        if (!match) throw new Error("Missing project");
-        const projectId = match._id;
+        const project = await slugProjectMatcher(userId, username, slug);
+        if (!project) throw { status: 404, message: "Project not found or missing authorization" };
 
-        const filter = buildTaskFilter(userId, projectId, taskId);
+        const filter = buildTaskFilter(userId, project._id, taskId);
         return await TaskModelV2.findOneAndUpdate(filter, updates, { new: true });
     } catch (e) {
         throw (e);
     }
 };
 
-exports.delete = async (userId, slug, taskId) => {
+exports.delete = async (userId, username, slug, taskId) => {
+    if (!userId) throw { status: 401, message: "Unauthorized" };
     if (!taskId) throw new Error("Missing task ID");
     try {
-        const match = await slugProjectMatcher(userId, slug);
-        if (!match) throw new Error("Missing project");
-        const projectId = match._id;
+        const project = await slugProjectMatcher(userId, username, slug);
+        if (!project) throw new Error("Missing project");
 
-        const filter = buildTaskFilter(userId, projectId, taskId);
+        const filter = buildTaskFilter(userId, project._id, taskId);
         const deletedTask =  await TaskModelV2.findOneAndUpdate(filter, { deleted: true }, { new: true });
         if (!deletedTask) throw new Error("Task not found");
         return deletedTask;

@@ -12,8 +12,10 @@ router.get('/:username/:slug/tasks', utils.authenticate, taskControllerV2.listTa
 
 router.post('/:username/:slug/tasks', utils.authenticate, taskControllerV2.createTask);
 
-router.put('/:username/:slug/:taskId', utils.authenticate, taskControllerV2.updateTask);
+router.get('/:username/:slug/tasks/:taskId', utils.authenticate, taskControllerV2.getTask);
 
-router.delete('/:username/:slug/:taskId', utils.authenticate, taskControllerV2.deleteTask);
+router.put('/:username/:slug/tasks/:taskId', utils.authenticate, taskControllerV2.updateTask);
+
+router.delete('/:username/:slug/tasks/:taskId', utils.authenticate, taskControllerV2.deleteTask);
 
 module.exports = router;
