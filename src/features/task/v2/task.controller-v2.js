@@ -93,6 +93,7 @@ exports.getTask = async (req, res, next) => {
     try {
         const task = await TaskServiceV2.find(userId, username, slug, taskId);
         if (!task) return res.status(404).json({ error: "Task not found" });
+
         res.json(task);  
     } catch (e) {
         return res.status(500).json({ error: e.message });
@@ -189,6 +190,40 @@ exports.deleteTask = async (req, res, next) => {
         if (!deletedTask) return res.status(404).json({ error: "Task not found" });
 
         res.send(200);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+}
+
+exports.listActivityLog = async (req, res, next) => {
+    const userId = req.user._id;
+    const idIssues = validateIds({ userId });
+
+    const { username, slug, taskId } = req.params;
+    const paramIssues = validate({
+            username,
+            slug,
+            taskId
+        }, {
+            username: {
+                presence: true 
+            },
+            slug: {
+                presence: true
+            },
+            taskId: {
+                presence: true
+            }
+        });
+
+    if (idIssues) return res.status(422).json({ err: idIssues });
+    if (paramIssues) return res.status(422).json({ err: paramIssues });
+
+    try {
+        const options = parsePagination(req.query);
+        const activity = await TaskServiceV2.listActivityLog(userId, username, slug, taskId, options);
+        if (!activity) return res.status(404).json({ message: "Activity logs not found" });
+        res.json(activity);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

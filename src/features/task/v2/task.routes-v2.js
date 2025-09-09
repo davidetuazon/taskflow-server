@@ -18,4 +18,6 @@ router.put('/:username/:slug/tasks/:taskId', utils.authenticate, taskControllerV
 
 router.delete('/:username/:slug/tasks/:taskId', utils.authenticate, taskControllerV2.deleteTask);
 
+router.get('/:username/:slug/tasks/:taskId/logs', utils.authenticate, taskControllerV2.listActivityLog);
+
 module.exports = router;
