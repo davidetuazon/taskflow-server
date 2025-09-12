@@ -53,9 +53,13 @@ exports.find = async (query = "", options = {}) => {
     }
 }
 
-exports.update = async (id, updates = {}) => {
+exports.update = async (username, updates = {}) => {
+    if (!username) throw { status: 422, message: "Missing parameter/s" };
     try {
-        return await UserModel.findByIdAndUpdate(id, updates, { new: true });
+        const user = await UserModel.findOne({ username: username });
+        if (!user) throw { status: 404, message: "User not found" };
+
+        return await UserModel.findByIdAndUpdate(user._id, updates, { new: true });
     } catch (e) {
         throw(e);
     }

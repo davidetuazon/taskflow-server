@@ -209,3 +209,32 @@ exports.removeMembers = async (userId, slug, memberId) => {
         throw (e);
     }
 }
+
+exports.search = async (userId, query) => {
+    try {
+        const filter = {
+            deleted: false,
+            $and: [
+                { $or: [
+                    { owner: userId },
+                    { members: userId }
+                ] }, {
+                    title: { $regex: query, $options: "i" }
+                }
+            ]
+        };
+        const projects = await ProjectModel
+            .find(filter)
+            .select('slug title owner')
+            .populate({
+                path: 'owner',
+                select: 'username'
+            })
+            .limit(parseInt(10))
+            .lean();
+        if (!projects) throw { status: 400, message: 'Projects not found' };
+        return projects;
+    } catch (e) {
+        throw(e);
+    }
+}

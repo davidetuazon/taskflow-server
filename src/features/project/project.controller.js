@@ -129,21 +129,6 @@ exports.updateProject = async (req, res, next) => {
     }
 };
 
-// exports.getProjectMembers = async (req, res, next) => {
-//     const { id: projectId } = req.params;
-//     if (!projectId) return res.status(404).json({ error: "Project not found" });
-
-//     const members = req.body;
-//     console.log({members: members});
-//     try {
-//         const mem = await ProjectService.findMembers(members);
-//         if (!mem) return res.status(404).json({ error: "No members found" });
-//         res.json(mem);
-//     } catch (e) {
-//         res.status(500).json({ error: e.message });
-//     }
-// }
-
 exports.addProjectMembers = async (req, res, next) => {
     const userId = req.user._id;
 
@@ -172,7 +157,6 @@ exports.removeProjectMembers = async (req, res, next) => {
     const userId = req.user._id;
 
     const { slug: slug, memberId } = req.params;
-    console.log(slug)
     const issues = validate({ slug, memberId }, { slug: { presence: true }, memberId: { presence: true } });
     if (issues) return res.status(422).json({ err: issues });
 
@@ -180,6 +164,22 @@ exports.removeProjectMembers = async (req, res, next) => {
         const project = await ProjectService.removeMembers(userId, slug, memberId);
         if (!project) return res.status(404).json({ error: "Failed to remove member" });
         res.json(project);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+}
+
+exports.searchProject = async (req, res, next) => {
+    const userId = req.user._id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { query } = req.query;
+    if (!query || typeof query !== "string") return res.status(400).json({ error: "Query parameter required" });
+
+    try {
+       const projects = await ProjectService.search(userId, query);
+       if (!projects || projects.length === 0) return res.status(404).json({ message: "Projects not found" });
+       res.json(projects);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

@@ -68,16 +68,17 @@ exports.getUsers = async (req, res, next) => {
 }
 
 exports.updateUser = async (req, res, next) => {
-    const { id } = req.params;
-    const idIssues = validate({ id }, { presence: true });
-    if (idIssues) return res.status(422).json({ err: idIssues });
+    const { username } = req.params;
+    const idIssues = validate({ username }, { presence: true });
 
     const updates = req.body;
     const issues = validate({ ...updates }, constraints.update);
+
+    if (idIssues) return res.status(422).json({ err: idIssues });
     if (issues) return res.status(422).json({ err: issues });
 
     try {
-        const user = await UserService.update({ _id: id }, updates);
+        const user = await UserService.update(username, updates);
         if (!user) return res.status(404).json({ err: "User not found" });
 
         res.json(user);
