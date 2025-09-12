@@ -27,7 +27,7 @@
    Full-stack balance. Improved both frontend and backend skills. To what extent? I'd say past entry-level skills.
 
 8. Weaknesses I noticed\
-   Polishing and completeness. I left some features unfinished (account settings, search bar, mobile responsiveness).\
+   Polishing and completeness. I left some features unfinished (account settings, adding members to project, mobile responsiveness).\
    No tests. No automated validation of reliability.\
    No deployment. I haven't shipped it. It is still in local/dev environment.
 
