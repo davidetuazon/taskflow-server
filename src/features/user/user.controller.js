@@ -13,8 +13,8 @@ exports.register = async (req, res, next) => {
     
     try {
         params.password = await bcrypt.hash(params.password, 16);
-        await UserService.create(params);
-    
+        return await UserService.create(params);
+
         res.status(201).json({ message: 'Registration successful' });
     } catch (e) {
         if (e.code === 11000 && e.keyPattern?.email) {

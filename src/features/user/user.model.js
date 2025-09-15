@@ -14,7 +14,6 @@ const userSchema = new Schema(
             enum: ['default', 'admin' ],
             default: 'default',
         },
-
         fullName: String,
         firstName: String,
         lastName: String,

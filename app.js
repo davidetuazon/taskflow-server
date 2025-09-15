@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
+const rateLimit = require('express-rate-limit')
 
 const app = express();
 
@@ -11,8 +12,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.set('trust proxy', 1);
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 mins
+    max: 100
+});
 
-mongoose.connect(process.env.MONGO_URI, {
+const mongoURI = process.env.NODE_ENV === 'production' ? process.env.MONGO_URI : process.env.MONGO_URI_LOCAL;
+
+mongoose.connect(mongoURI, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
     });

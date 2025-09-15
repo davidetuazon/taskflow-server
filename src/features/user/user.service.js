@@ -3,8 +3,10 @@ const UserModel = require('./user.model');
 const bcrypt = require('bcryptjs');
 
 exports.create = async (params = {}) => {
+    const { firstName, lastName } = params;
+    const fullName = `${firstName} ${lastName}`;
     try {
-        return await UserModel.create(params);
+        return await UserModel.create({...params, fullName: fullName});
     } catch (e) {
         throw(e);
     }
