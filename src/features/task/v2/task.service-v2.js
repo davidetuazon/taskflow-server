@@ -254,10 +254,24 @@ exports.update = async (userId, username, slug, taskId, updates = {}) => {
                 {path: 'assignedTo', select: 'email username fullName'},
             ]);
         if (!newTask) throw { status: 500, message: 'Task update failed unexpectedly' };
+
+        const isEqual = (a, b) => {
+            if (a instanceof Date && b instanceof Date) {
+                return a.getTime() === b.getTime();
+            }
+            return a === b;
+        }
             
         for (const field in updates) {
-            if (oldTask[field] !== newTask[field]) {
-                const formatVal = (val) => val === "" || val === null ? 'Empty field' : val;
+            if (!isEqual(oldTask[field], newTask[field])) {
+                const formatVal = (val) => {
+                    if (val === "" || val === null) return "Empty field";
+
+                    if (val instanceof Date) {
+                        return val.toDateString();
+                    }
+                    return val;
+                };
 
                 await ActivityLogModel.create({
                     taskId: oldTask._id,
