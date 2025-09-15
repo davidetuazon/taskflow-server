@@ -39,10 +39,5 @@ userSchema.index({
     lastName: 'text',
     fullName: 'text',
 });
-userSchema.index({
-    username: 1
-}, {
-    unique: true
-});
 userSchema.plugin(mongoosePaginate);
 module.exports = mongoose.model('User', userSchema);
