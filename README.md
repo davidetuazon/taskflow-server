@@ -1,4 +1,5 @@
 ### `Post-Project Reflection (of sorts)`
+Deployed using Vercel + Render (https://taskflow-client-two.vercel.app)
 
 1. What I set out to build\
    A simple task tracker with CRUD features. The goal was to strengthen my full-stack fundamentals and complete an end-to-end project.
